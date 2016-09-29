@@ -1,0 +1,28 @@
+{
+    "mapping": [
+        {
+            "from": {
+                "path": "C:\\data\\fis\\dev\\www\\fcs\\merc\\test1remote"
+            },
+            "to": [
+                {
+                    "path": "C:\\data\\fis\\dev\\www\\fcs\\merc\\test2remote"
+                },
+                {
+                    "path": "C:\\data\\fis\\dev\\www\\fcs\\merc\\test3remote",
+                    "forceBranch": "incoming"
+                }
+            ]
+        },
+        {
+            "from": {
+                "path": "C:\\data\\fis\\dev\\www\\fcs\\merc\\test2remote"
+            },
+            "to": [
+                {
+                    "path": "C:\\data\\fis\\dev\\www\\fcs\\merc\\test3remote"
+                }
+            ]
+        }
+    ]
+}
