@@ -90,41 +90,43 @@ def cloneCommitsHook(ui, repo, **kwargs):
     """
     # Получаем список ссылок на репозитории, в которые клонировать изменение
     remotes = getReposToPushTo(repo)
-    # Идентификатор изменения
-    node = kwargs['node']
-    # Ветка, в которой находится изменение
-    branch = repo[node].branch()
-    # Создаём патч-файл
-    ui.write('Creating a patch-file for {0}.\n'.format(node))
-    cmd = 'hg export --output "{1}/{0}.patch" --rev {0} --verbose -R "{2}"'.format(node, scriptDir, repo.root)
-    ui.write('Command: ' + cmd + '\n')
-    ui.write(runCommand(cmd))
-    if os.path.isfile(scriptDir + '/' + node + '.patch'):
-        # Для каждого исходящего репозитория
-        for remote in remotes:
-            path = remote['path']
-            # Если указана конкретная ветка, то переносим в неё
-            if 'forceBranch' in remote:
-                actualBranch = remote['forceBranch']
-            else:
-                actualBranch = branch
-            # Меняем ветку исходящего репозитория
-            ui.write('Changing branch at {0} to {1}.\n'.format(path, actualBranch))
-            cmd = 'hg update --verbose -R "{0}" {1}'.format(path, actualBranch)
-            ui.write('Command: ' + cmd + '\n')
-            ui.write(runCommand(cmd))
-            # Устанавливаем патч-файл в исходящий репозиторий
-            ui.write('Cloning {0} to {1}...\n'.format(node, path))
-            cmd = 'hg import --verbose -R "{0}" "{2}/{1}.patch"'.format(path, node, scriptDir)
-            ui.write('Command: ' + cmd + '\n')
-            ui.write(runCommand(cmd))
-        # Удаляем патч-файл
-        ui.write('Cleaning up...\n')
-        cmd = 'rm "{1}/{0}.patch"'.format(node, scriptDir)
+    # Если таковые имеются
+    if len(remotes):
+        # Идентификатор изменения
+        node = kwargs['node']
+        # Ветка, в которой находится изменение
+        branch = repo[node].branch()
+        # Создаём патч-файл
+        ui.write('Creating a patch-file for {0}.\n'.format(node))
+        cmd = 'hg export --output "{1}/{0}.patch" --rev {0} --verbose -R "{2}"'.format(node, scriptDir, repo.root)
         ui.write('Command: ' + cmd + '\n')
         ui.write(runCommand(cmd))
-    else:
-        ui.write('Failed to create a patch-file at "{}".\n'.format(scriptDir))
+        if os.path.isfile(scriptDir + '/' + node + '.patch'):
+            # Для каждого исходящего репозитория
+            for remote in remotes:
+                path = remote['path']
+                # Если указана конкретная ветка, то переносим в неё
+                if 'forceBranch' in remote:
+                    actualBranch = remote['forceBranch']
+                else:
+                    actualBranch = branch
+                # Меняем ветку исходящего репозитория
+                ui.write('Changing branch at {0} to {1}.\n'.format(path, actualBranch))
+                cmd = 'hg update --verbose -R "{0}" {1}'.format(path, actualBranch)
+                ui.write('Command: ' + cmd + '\n')
+                ui.write(runCommand(cmd))
+                # Устанавливаем патч-файл в исходящий репозиторий
+                ui.write('Cloning {0} to {1}...\n'.format(node, path))
+                cmd = 'hg import --verbose -R "{0}" "{2}/{1}.patch"'.format(path, node, scriptDir)
+                ui.write('Command: ' + cmd + '\n')
+                ui.write(runCommand(cmd))
+            # Удаляем патч-файл
+            ui.write('Cleaning up...\n')
+            cmd = 'rm "{1}/{0}.patch"'.format(node, scriptDir)
+            ui.write('Command: ' + cmd + '\n')
+            ui.write(runCommand(cmd))
+        else:
+            ui.write('Failed to create a patch-file at "{}".\n'.format(scriptDir))
 
 """
 Тестовый вывод:
