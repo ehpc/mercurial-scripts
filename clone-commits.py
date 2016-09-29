@@ -58,7 +58,7 @@ import json
 import os
 from mercurial import ui, hg, cmdutil, commands
 from mercurial.i18n import _
-from subprocess import check_output, call
+from subprocess import check_output, call, STDOUT, CalledProcessError
 from pprint import pprint
 
 scriptDir = os.path.dirname(os.path.abspath(__file__))
@@ -74,6 +74,15 @@ def getReposToPushTo(repo):
     config = [mapping['to'] for mapping in config['mapping'] if mapping['from']['path'] == repo.root] # repo.root = repo.path
     return config[0] if config else []
 
+def runCommand(cmd):
+    """
+    Выполняет команду и возвращает строки результата.
+    """
+    try:
+        return check_output(cmd + '\n', stderr=STDOUT, shell=True)
+    except CalledProcessError as e:
+        return 'Error: ' + e.output + '\n'
+
 def cloneCommitsHook(ui, repo, **kwargs):
     """
     Хук, который выполняет при событии "incoming", т.е. при каждом входящем изменении в репозиторий.
@@ -87,7 +96,9 @@ def cloneCommitsHook(ui, repo, **kwargs):
     branch = repo[node].branch()
     # Создаём патч-файл
     ui.write('Creating a patch-file for {0}.\n'.format(node))
-    call('hg export --output "{1}/{0}.patch" --rev {0} --verbose'.format(node, scriptDir), shell=True)
+    cmd = 'hg export --output "{1}/{0}.patch" --rev {0} --verbose -R "{2}"'.format(node, scriptDir, repo.root)
+    ui.write('Command: ' + cmd + '\n')
+    ui.write(runCommand(cmd))
     if os.path.isfile(scriptDir + '/' + node + '.patch'):
         # Для каждого исходящего репозитория
         for remote in remotes:
@@ -99,53 +110,67 @@ def cloneCommitsHook(ui, repo, **kwargs):
                 actualBranch = branch
             # Меняем ветку исходящего репозитория
             ui.write('Changing branch at {0} to {1}.\n'.format(path, actualBranch))
-            call('hg update --verbose -R "{0}" {1}'.format(path, actualBranch), shell=True)
+            cmd = 'hg update --verbose -R "{0}" {1}'.format(path, actualBranch)
+            ui.write('Command: ' + cmd + '\n')
+            ui.write(runCommand(cmd))
             # Устанавливаем патч-файл в исходящий репозиторий
             ui.write('Cloning {0} to {1}...\n'.format(node, path))
-            call('hg import --verbose -R "{0}" "{2}/{1}.patch"'.format(path, node, scriptDir), shell=True)
+            cmd = 'hg import --verbose -R "{0}" "{2}/{1}.patch"'.format(path, node, scriptDir)
+            ui.write('Command: ' + cmd + '\n')
+            ui.write(runCommand(cmd))
         # Удаляем патч-файл
-        call('rm "{1}/{0}.patch"'.format(node, scriptDir), shell=True)
+        ui.write('Cleaning up...\n')
+        cmd = 'rm "{1}/{0}.patch"'.format(node, scriptDir)
+        ui.write('Command: ' + cmd + '\n')
+        ui.write(runCommand(cmd))
     else:
         ui.write('Failed to create a patch-file at "{}".\n'.format(scriptDir))
 
 """
 Тестовый вывод:
-> echo 1 >> test4.txt && hg add && hg commit -m "test1" && hg push --verbose
-pushing to C:\data\fis\dev\www\fcs\merc\test1remote
+> echo 1 >> test16.txt && hg add && hg commit -m "test1" && hg push --verbose
+adding test16.txt
+pushing to http://mercurial.fisgroup.ru/fcs/web/test1/
 searching for changes
 1 changesets found
 uncompressed size of bundle content:
-     191 (changelog)
-     171 (manifests)
-     138  test4.txt
-adding changesets
-adding manifests
-adding file changes
-added 1 changesets with 1 changes to 1 files
-calling hook incoming.cloneCommits: hghook_incoming_cloneCommits.cloneCommitsHook
-Creating a patch-file for 99b25cb2cafd430011e04c9d7ca15f01206aca71.
-exporting patch:
-C:\Users\ehpc\Dropbox\projects\dev\mercurial/99b25cb2cafd430011e04c9d7ca15f01206aca71.patch
-Changing branch at C:\data\fis\dev\www\fcs\merc\test2remote to default.
-0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-Cloning 99b25cb2cafd430011e04c9d7ca15f01206aca71 to C:\data\fis\dev\www\fcs\merc\test2remote...
-applying C:\Users\ehpc\Dropbox\projects\dev\mercurial/99b25cb2cafd430011e04c9d7ca15f01206aca71.patch
-patching file test4.txt
-Hunk #1 succeeded at 8 (offset -7 lines).
-committing files:
-test4.txt
-committing manifest
-committing changelog
-created f2595edd2148
-Changing branch at C:\data\fis\dev\www\fcs\merc\test3remote to incoming.
-0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-Cloning 99b25cb2cafd430011e04c9d7ca15f01206aca71 to C:\data\fis\dev\www\fcs\merc\test3remote...
-applying C:\Users\ehpc\Dropbox\projects\dev\mercurial/99b25cb2cafd430011e04c9d7ca15f01206aca71.patch
-patching file test4.txt
-Hunk #1 succeeded at 4 (offset -11 lines).
-committing files:
-test4.txt
-committing manifest
-committing changelog
-created cdc471b0f5da
+     202 (changelog)
+     172 (manifests)
+     139  test16.txt
+remote: adding changesets
+remote: adding manifests
+remote: adding file changes
+remote: added 1 changesets with 1 changes to 1 files
+remote: Creating a patch-file for 2a2f26d98c9b1f382fc69895f3e619d12f97b629.
+remote: Command: hg export --output "/home/merc/hooks/2a2f26d98c9b1f382fc69895f3e619d12f97b629.patch" --rev 2a2f26d98c9b1f382fc69895f3e619d12f97b629 --verbose -R "/home/merc/fcs/web/test1"
+remote: exporting patch:
+remote: /home/merc/hooks/2a2f26d98c9b1f382fc69895f3e619d12f97b629.patch
+remote: Changing branch at /home/merc/fcs/web/test2 to default.
+remote: Command: hg update --verbose -R "/home/merc/fcs/web/test2" default
+remote: 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+remote: Cloning 2a2f26d98c9b1f382fc69895f3e619d12f97b629 to /home/merc/fcs/web/test2...
+remote: Command: hg import --verbose -R "/home/merc/fcs/web/test2" "/home/merc/hooks/2a2f26d98c9b1f382fc69895f3e619d12f97b629.patch"
+remote: applying /home/merc/hooks/2a2f26d98c9b1f382fc69895f3e619d12f97b629.patch
+remote: patching file test16.txt
+remote: adding test16.txt
+remote: committing files:
+remote: test16.txt
+remote: committing manifest
+remote: committing changelog
+remote: created 7fd2a5161b2b
+remote: Changing branch at /home/merc/fcs/web/test3 to default.
+remote: Command: hg update --verbose -R "/home/merc/fcs/web/test3" default
+remote: 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+remote: Cloning 2a2f26d98c9b1f382fc69895f3e619d12f97b629 to /home/merc/fcs/web/test3...
+remote: Command: hg import --verbose -R "/home/merc/fcs/web/test3" "/home/merc/hooks/2a2f26d98c9b1f382fc69895f3e619d12f97b629.patch"
+remote: applying /home/merc/hooks/2a2f26d98c9b1f382fc69895f3e619d12f97b629.patch
+remote: patching file test16.txt
+remote: adding test16.txt
+remote: committing files:
+remote: test16.txt
+remote: committing manifest
+remote: committing changelog
+remote: created 57dbcab3dc96
+remote: Cleaning up...
+remote: Command: rm "/home/merc/hooks/2a2f26d98c9b1f382fc69895f3e619d12f97b629.patch"
 """
