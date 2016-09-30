@@ -6,11 +6,17 @@
             },
             "to": [
                 {
-                    "path": "C:\\data\\fis\\dev\\www\\fcs\\merc\\test2remote"
+                    "path": "C:\\data\\fis\\dev\\www\\fcs\\merc\\test2remote",
+                    "mapping": {
+                        "default": "default",
+                        "outgoing": "incoming"
+                    }
                 },
                 {
                     "path": "C:\\data\\fis\\dev\\www\\fcs\\merc\\test3remote",
-                    "forceBranch": "incoming"
+                    "mapping": {
+                        "*": "default"
+                    }
                 }
             ]
         },
